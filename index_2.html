@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ledger">
+<meta name="theme-color" content="#EAE6DC">
+<title>Weekly Ledger — Budget Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EAE6DC; --paper-dim:#DFDACD; --ink:#1F2A24; --ink-soft:#5B655F;
+    --rule:#BEB6A0; --good:#2F6B4F; --good-bg:#E3ECE5; --bad:#A63D40; --bad-bg:#F3E1DF;
+    --accent:#C98A3E;
+  }
+  *{box-sizing:border-box;}
+  body,html{margin:0;padding:0;}
+  .app-shell{
+    font-family:'Inter',sans-serif; background:var(--paper); color:var(--ink);
+    max-width:460px; margin:0 auto; min-height:100vh; position:relative;
+    padding-bottom:76px;
+  }
+  .screen{padding:20px 16px 24px;}
+  h1.page-title{font-family:'Source Serif 4',serif;font-size:1.3rem;font-weight:700;margin:0 0 4px;}
+  .page-sub{font-size:.78rem;color:var(--ink-soft);margin-bottom:18px;}
+  .card{background:var(--paper-dim);border:1px solid var(--rule);border-radius:8px;padding:16px;margin-bottom:14px;}
+  .label{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-soft);margin-bottom:8px;display:block;}
+  .period-options{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+  .period-opt{
+    display:flex;align-items:center;gap:10px;border:1px solid var(--rule);border-radius:6px;
+    padding:12px 14px;cursor:pointer;background:var(--paper);
+  }
+  .period-opt.selected{border-color:var(--accent);background:#F4E7D2;}
+  .period-opt .dot{width:16px;height:16px;border-radius:50%;border:2px solid var(--rule);flex-shrink:0;position:relative;}
+  .period-opt.selected .dot{border-color:var(--accent);}
+  .period-opt.selected .dot::after{content:'';position:absolute;inset:3px;background:var(--accent);border-radius:50%;}
+  .period-opt-title{font-weight:600;font-size:.92rem;}
+  .period-opt-sub{font-size:.7rem;color:var(--ink-soft);}
+  .amount-input-wrap{display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--rule);padding:6px 2px;margin-bottom:18px;}
+  .amount-input-wrap span{font-family:'IBM Plex Mono',monospace;font-size:1.3rem;color:var(--ink-soft);}
+  .amount-input-wrap input{
+    font-family:'IBM Plex Mono',monospace;font-size:1.3rem;font-weight:600;border:none;background:transparent;
+    width:100%;color:var(--ink);
+  }
+  .amount-input-wrap input:focus{outline:none;}
+  .btn{
+    width:100%;padding:13px;border-radius:6px;border:none;font-family:'Inter',sans-serif;font-weight:600;
+    font-size:.9rem;cursor:pointer;background:var(--ink);color:var(--paper);
+  }
+  .btn:disabled{opacity:.4;cursor:default;}
+  .btn-link{background:none;border:none;color:var(--accent);font-size:.8rem;font-weight:600;cursor:pointer;padding:0;}
+  .cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px;}
+  .cat-btn{
+    border:1px solid var(--rule);background:var(--paper);border-radius:6px;padding:10px 4px;
+    font-size:.68rem;text-align:center;cursor:pointer;color:var(--ink);line-height:1.3;
+  }
+  .cat-btn .emoji{display:block;font-size:1.1rem;margin-bottom:3px;}
+  .cat-btn.selected{border-color:var(--accent);background:#F4E7D2;}
+  .date-input{
+    font-family:'IBM Plex Mono',monospace;font-size:.85rem;border:1px solid var(--rule);border-radius:6px;
+    padding:8px 10px;background:var(--paper);color:var(--ink);width:100%;margin-bottom:18px;
+  }
+  .recent-title{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-soft);margin:20px 0 8px;}
+  .recent-item{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--rule);}
+  .recent-item:last-child{border-bottom:none;}
+  .recent-left{display:flex;flex-direction:column;}
+  .recent-cat{font-size:.82rem;font-weight:600;}
+  .recent-date{font-size:.68rem;color:var(--ink-soft);}
+  .recent-amt{font-family:'IBM Plex Mono',monospace;font-size:.92rem;}
+  .del-btn{background:none;border:none;color:var(--bad);font-size:.9rem;cursor:pointer;margin-left:10px;padding:2px 4px;}
+  .stamp{
+    display:block;width:fit-content;margin:0 auto 16px;font-family:'IBM Plex Mono',monospace;font-weight:600;
+    font-size:.72rem;letter-spacing:.12em;border:2px dashed currentColor;border-radius:4px;padding:5px 12px;
+    transform:rotate(-3deg);
+  }
+  .stamp.ok{color:var(--good);} .stamp.over{color:var(--bad);}
+  .big-total{font-family:'IBM Plex Mono',monospace;font-size:2rem;font-weight:700;text-align:center;margin:6px 0 2px;}
+  .big-sub{text-align:center;font-size:.78rem;color:var(--ink-soft);margin-bottom:16px;}
+  .bar-outer{height:8px;background:var(--rule);border-radius:4px;overflow:hidden;margin-bottom:16px;}
+  .bar-inner{height:100%;}
+  .cat-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--rule);}
+  .cat-row:last-child{border-bottom:none;}
+  .cat-row-name{width:100px;font-size:.8rem;flex-shrink:0;}
+  .cat-row-bar{flex:1;height:6px;background:var(--rule);border-radius:3px;overflow:hidden;}
+  .cat-row-bar-fill{height:100%;background:var(--accent);}
+  .cat-row-amt{font-family:'IBM Plex Mono',monospace;font-size:.78rem;width:64px;text-align:right;flex-shrink:0;}
+  .empty-note{font-size:.8rem;color:var(--ink-soft);text-align:center;padding:20px 0;}
+  .tabbar{
+    position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:460px;
+    background:var(--paper-dim);border-top:1px solid var(--rule);display:flex;
+  }
+  .tab-btn{
+    flex:1;background:none;border:none;padding:10px 4px 14px;display:flex;flex-direction:column;align-items:center;
+    gap:3px;cursor:pointer;color:var(--ink-soft);font-family:'Inter',sans-serif;
+  }
+  .tab-btn.active{color:var(--accent);}
+  .tab-btn .icon{font-size:1.15rem;}
+  .tab-btn .tlabel{font-size:.65rem;font-weight:600;}
+  .loading{text-align:center;color:var(--ink-soft);padding:60px 0;font-size:.85rem;}
+</style>
+</head>
+<body>
+
+<div class="app-shell" id="app">
+  <div class="loading">Opening the ledger…</div>
+</div>
+
+<script>
+(function(){
+  const CATEGORIES = [
+    {id:'food', label:'Food', emoji:'🍽️'},
+    {id:'groceries', label:'Groceries', emoji:'🛒'},
+    {id:'transport', label:'Transport', emoji:'🚗'},
+    {id:'bills', label:'Bills', emoji:'🧾'},
+    {id:'shopping', label:'Shopping', emoji:'🛍️'},
+    {id:'entertainment', label:'Fun', emoji:'🎬'},
+    {id:'health', label:'Health', emoji:'💊'},
+    {id:'other', label:'Other', emoji:'📦'},
+  ];
+  const app = document.getElementById('app');
+  let settings = null;       // {periodType, budget, createdAt}
+  let expenses = [];         // [{id,date,amount,category}]
+  let activeTab = 'budget';  // budget | add | report
+  let draft = { amount:'', category:null, date: isoDate(new Date()) };
+  let settingsEditing = false;
+
+  function pad(n){return n<10?'0'+n:''+n;}
+  function isoDate(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+  function fmtMoney(n){const s=n<0?'-':'';return s+'$'+Math.abs(n).toFixed(2);}
+  function fmtDate(iso){
+    const d = new Date(iso+'T00:00:00');
+    return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  }
+  function mondayOf(date){
+    const d=new Date(date); const day=d.getDay(); const diff=(day===0?-6:1-day);
+    d.setDate(d.getDate()+diff); d.setHours(0,0,0,0); return d;
+  }
+  function addDays(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r;}
+
+  async function loadAll(){
+    try{
+      const raw = localStorage.getItem('settings');
+      settings = raw ? JSON.parse(raw) : null;
+    }catch(e){ settings = null; }
+    try{
+      const raw = localStorage.getItem('expenses');
+      expenses = raw ? JSON.parse(raw) : [];
+    }catch(e){ expenses = []; }
+  }
+  async function saveSettings(){
+    try{ localStorage.setItem('settings', JSON.stringify(settings)); }
+    catch(e){ console.error('save failed', e); }
+  }
+  async function saveExpenses(){
+    try{ localStorage.setItem('expenses', JSON.stringify(expenses)); }
+    catch(e){ console.error('save failed', e); }
+  }
+
+  function periodRange(refDate){
+    const today = refDate || new Date();
+    if(!settings) return null;
+    if(settings.periodType==='weekly'){
+      const start = mondayOf(today); const end = addDays(start,6);
+      return {start, end, label:'Weekly'};
+    }
+    if(settings.periodType==='monthly'){
+      const start = new Date(today.getFullYear(), today.getMonth(), 1);
+      const end = new Date(today.getFullYear(), today.getMonth()+1, 0);
+      return {start, end, label:'Monthly'};
+    }
+    const anchor = mondayOf(new Date(settings.createdAt+'T00:00:00'));
+    const diffDays = Math.floor((mondayOf(today)-anchor)/(1000*60*60*24));
+    const blockIndex = Math.floor(diffDays/14);
+    const start = addDays(anchor, blockIndex*14);
+    const end = addDays(start,13);
+    return {start, end, label:'Fortnightly'};
+  }
+
+  function expensesInRange(range){
+    const s = isoDate(range.start), e = isoDate(range.end);
+    return expenses.filter(x => x.date>=s && x.date<=e);
+  }
+
+  function renderTabbar(){
+    return `
+      <div class="tabbar">
+        <button class="tab-btn ${activeTab==='budget'?'active':''}" data-tab="budget">
+          <span class="icon">🎯</span><span class="tlabel">Budget</span>
+        </button>
+        <button class="tab-btn ${activeTab==='add'?'active':''}" data-tab="add">
+          <span class="icon">➕</span><span class="tlabel">Add</span>
+        </button>
+        <button class="tab-btn ${activeTab==='report'?'active':''}" data-tab="report">
+          <span class="icon">📊</span><span class="tlabel">Report</span>
+        </button>
+        <button class="tab-btn ${activeTab==='dashboard'?'active':''}" data-tab="dashboard">
+          <span class="icon">🗓️</span><span class="tlabel">Monthly</span>
+        </button>
+      </div>`;
+  }
+
+  function renderSetup(editing){
+    const opts = [
+      {id:'weekly', title:'Weekly', sub:'Resets every Monday'},
+      {id:'fortnightly', title:'Fortnightly', sub:'Resets every 2 weeks'},
+      {id:'monthly', title:'Monthly', sub:'Resets on the 1st'},
+    ];
+    const sel = draft.periodType || (editing && settings ? settings.periodType : null);
+    const amt = draft.amount2 !== null && draft.amount2 !== undefined ? draft.amount2 : ((editing && settings) ? settings.budget : '');
+    return `
+      <div class="screen">
+        <h1 class="page-title">Set your budget</h1>
+        <div class="page-sub">Choose one period — you can change this later.</div>
+        <div class="card">
+          <span class="label">Period</span>
+          <div class="period-options">
+            ${opts.map(o=>`
+              <div class="period-opt ${sel===o.id?'selected':''}" data-period="${o.id}">
+                <div class="dot"></div>
+                <div>
+                  <div class="period-opt-title">${o.title}</div>
+                  <div class="period-opt-sub">${o.sub}</div>
+                </div>
+              </div>`).join('')}
+          </div>
+          <span class="label">Budget amount</span>
+          <div class="amount-input-wrap">
+            <span>$</span>
+            <input type="number" inputmode="decimal" min="0" step="1" id="setupAmount" placeholder="0" value="${amt}"/>
+          </div>
+          <button class="btn" id="saveSetup">Save budget</button>
+        </div>
+      </div>`;
+  }
+
+  function renderBudgetTab(){
+    if(!settings) return renderSetup(false);
+    const range = periodRange(new Date());
+    const inRange = expensesInRange(range);
+    const spent = inRange.reduce((a,b)=>a+b.amount,0);
+    const remaining = settings.budget - spent;
+    return `
+      <div class="screen">
+        <h1 class="page-title">Your budget</h1>
+        <div class="page-sub">${settings.periodType.charAt(0).toUpperCase()+settings.periodType.slice(1)} · ${fmtDate(isoDate(range.start))} – ${fmtDate(isoDate(range.end))}</div>
+        <div class="card">
+          <span class="label">${settings.periodType} budget</span>
+          <div class="big-total">${fmtMoney(settings.budget)}</div>
+          <div class="big-sub" style="color:${remaining>=0?'var(--good)':'var(--bad)'}">
+            ${remaining>=0 ? fmtMoney(remaining)+' remaining' : fmtMoney(-remaining)+' over budget'}
+          </div>
+          <button class="btn-link" id="editSetup">Change period or amount</button>
+        </div>
+      </div>`;
+  }
+
+  function renderAddTab(){
+    const recentList = expenses.slice().sort((a,b)=>b.date.localeCompare(a.date) || (b.id-a.id)).slice(0,6);
+    return `
+      <div class="screen">
+        <h1 class="page-title">Add an expense</h1>
+        <div class="page-sub">Log what you spent.</div>
+        <div class="card">
+          <span class="label">Amount</span>
+          <div class="amount-input-wrap">
+            <span>$</span>
+            <input type="number" inputmode="decimal" min="0" step="0.01" id="expAmount" placeholder="0.00" value="${draft.amount}"/>
+          </div>
+          <span class="label">Category</span>
+          <div class="cat-grid">
+            ${CATEGORIES.map(c=>`
+              <div class="cat-btn ${draft.category===c.id?'selected':''}" data-cat="${c.id}">
+                <span class="emoji">${c.emoji}</span>${c.label}
+              </div>`).join('')}
+          </div>
+          <span class="label">Date</span>
+          <input type="date" class="date-input" id="expDate" value="${draft.date}"/>
+          <button class="btn" id="saveExpense" ${(!draft.amount || !draft.category)?'disabled':''}>Save expense</button>
+        </div>
+
+        <div class="recent-title">Recent entries</div>
+        <div class="card">
+          ${recentList.length===0 ? '<div class="empty-note">No expenses logged yet.</div>' :
+            recentList.map(x=>{
+              const cat = CATEGORIES.find(c=>c.id===x.category);
+              return `<div class="recent-item">
+                <div class="recent-left">
+                  <span class="recent-cat">${cat?cat.emoji+' '+cat.label:x.category}</span>
+                  <span class="recent-date">${fmtDate(x.date)}</span>
+                </div>
+                <div style="display:flex;align-items:center;">
+                  <span class="recent-amt">${fmtMoney(x.amount)}</span>
+                  <button class="del-btn" data-del="${x.id}">✕</button>
+                </div>
+              </div>`;
+            }).join('')}
+        </div>
+      </div>`;
+  }
+
+  function renderReportTab(){
+    if(!settings){
+      return `<div class="screen"><h1 class="page-title">Report</h1><div class="empty-note">Set a budget first to see your report.</div></div>`;
+    }
+    const range = periodRange(new Date());
+    const inRange = expensesInRange(range);
+    const spent = inRange.reduce((a,b)=>a+b.amount,0);
+    const diff = settings.budget - spent;
+    const pct = Math.min(100, (spent/settings.budget)*100);
+    const over = diff < 0;
+
+    const byCat = {};
+    inRange.forEach(x=>{ byCat[x.category] = (byCat[x.category]||0)+x.amount; });
+    const catRows = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+    const maxCat = catRows.length ? catRows[0][1] : 1;
+
+    return `
+      <div class="screen">
+        <h1 class="page-title">${settings.periodType.charAt(0).toUpperCase()+settings.periodType.slice(1)} report</h1>
+        <div class="page-sub">${fmtDate(isoDate(range.start))} – ${fmtDate(isoDate(range.end))}</div>
+
+        <div class="stamp ${over?'over':'ok'}">${over ? 'OVER BUDGET' : 'UNDER BUDGET'}</div>
+
+        <div class="card">
+          <div class="big-total" style="color:${over?'var(--bad)':'var(--good)'}">${over?fmtMoney(-diff)+' over':fmtMoney(diff)+' left'}</div>
+          <div class="big-sub">${fmtMoney(spent)} spent of ${fmtMoney(settings.budget)} budget</div>
+          <div class="bar-outer"><div class="bar-inner" style="width:${pct}%;background:${over?'var(--bad)':'var(--good)'};"></div></div>
+        </div>
+
+        <span class="label">By category</span>
+        <div class="card">
+          ${catRows.length===0 ? '<div class="empty-note">No expenses logged this period yet.</div>' :
+            catRows.map(([cid,amt])=>{
+              const cat = CATEGORIES.find(c=>c.id===cid);
+              const w = (amt/maxCat)*100;
+              return `<div class="cat-row">
+                <div class="cat-row-name">${cat?cat.emoji+' '+cat.label:cid}</div>
+                <div class="cat-row-bar"><div class="cat-row-bar-fill" style="width:${w}%"></div></div>
+                <div class="cat-row-amt">${fmtMoney(amt)}</div>
+              </div>`;
+            }).join('')}
+        </div>
+      </div>`;
+  }
+
+  function renderDashboardTab(){
+    if(!settings){
+      return `<div class="screen"><h1 class="page-title">Monthly dashboard</h1><div class="empty-note">Set a budget on the Budget tab first.</div></div>`;
+    }
+
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    const daysInMonth = monthEnd.getDate();
+
+    let dailyRate;
+    if(settings.periodType==='weekly') dailyRate = settings.budget/7;
+    else if(settings.periodType==='fortnightly') dailyRate = settings.budget/14;
+    else dailyRate = settings.budget/daysInMonth;
+    const monthlyBudget = dailyRate * daysInMonth;
+
+    const s = isoDate(monthStart), e = isoDate(monthEnd);
+    const inMonth = expenses.filter(x => x.date>=s && x.date<=e);
+    const spent = inMonth.reduce((a,b)=>a+b.amount,0);
+    const diff = monthlyBudget - spent;
+    const pct = Math.min(100, (spent/monthlyBudget)*100);
+    const deficit = diff < 0;
+
+    const byCat = {};
+    inMonth.forEach(x=>{ byCat[x.category] = (byCat[x.category]||0)+x.amount; });
+    const catRows = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+    const maxCat = catRows.length ? catRows[0][1] : 1;
+
+    return `
+      <div class="screen">
+        <h1 class="page-title">Monthly dashboard</h1>
+        <div class="page-sub">${now.toLocaleDateString('en-US',{month:'long',year:'numeric'})} · based on your ${settings.periodType} budget</div>
+
+        <div class="stamp ${deficit?'over':'ok'}">${deficit?'DEFICIT':'SURPLUS'}</div>
+
+        <div class="card">
+          <span class="label">Allocated this month</span>
+          <div class="big-total">${fmtMoney(monthlyBudget)}</div>
+          <div class="big-sub">${fmtMoney(spent)} spent this month</div>
+          <div class="bar-outer"><div class="bar-inner" style="width:${pct}%;background:${deficit?'var(--bad)':'var(--good)'};"></div></div>
+          <div class="big-sub" style="color:${deficit?'var(--bad)':'var(--good)'};font-weight:600;">
+            ${deficit ? fmtMoney(-diff)+' deficit' : fmtMoney(diff)+' surplus'}
+          </div>
+        </div>
+
+        <span class="label">By category this month</span>
+        <div class="card">
+          ${catRows.length===0 ? '<div class="empty-note">No expenses logged this month yet.</div>' :
+            catRows.map(([cid,amt])=>{
+              const cat = CATEGORIES.find(c=>c.id===cid);
+              const w = (amt/maxCat)*100;
+              return `<div class="cat-row">
+                <div class="cat-row-name">${cat?cat.emoji+' '+cat.label:cid}</div>
+                <div class="cat-row-bar"><div class="cat-row-bar-fill" style="width:${w}%"></div></div>
+                <div class="cat-row-amt">${fmtMoney(amt)}</div>
+              </div>`;
+            }).join('')}
+        </div>
+      </div>`;
+  }
+
+  function refreshSaveBtn(){
+    const b = document.getElementById('saveExpense');
+    if(b) b.disabled = !(draft.amount && draft.category);
+  }
+
+  function bindEvents(mode){
+    if(mode==='setup' || mode==='edit'){
+      document.querySelectorAll('.period-opt').forEach(el=>{
+        el.onclick = ()=>{ draft.periodType = el.dataset.period; render(); };
+      });
+      const amtInput = document.getElementById('setupAmount');
+      if(amtInput){
+        amtInput.oninput = (e)=>{ draft.amount2 = e.target.value; };
+      }
+      const saveBtn = document.getElementById('saveSetup');
+      if(saveBtn){
+        saveBtn.onclick = async ()=>{
+          const periodType = draft.periodType || (settings && settings.periodType);
+          const amountVal = amtInput.value;
+          if(!periodType || amountVal===''){ return; }
+          settings = { periodType, budget: parseFloat(amountVal), createdAt: settings ? settings.createdAt : isoDate(new Date()) };
+          draft.periodType = null; draft.amount2 = null;
+          settingsEditing = false;
+          await saveSettings();
+          activeTab = 'budget';
+          render();
+        };
+      }
+    }
+    if(mode==='budget-view'){
+      const editBtn = document.getElementById('editSetup');
+      if(editBtn) editBtn.onclick = ()=>{ settingsEditing = true; render(); };
+    }
+    if(mode==='add'){
+      document.querySelectorAll('.cat-btn').forEach(el=>{
+        el.onclick = ()=>{ draft.category = el.dataset.cat; render(); };
+      });
+      const amt = document.getElementById('expAmount');
+      const dt = document.getElementById('expDate');
+      if(amt) amt.oninput = (e)=>{ draft.amount = e.target.value; refreshSaveBtn(); };
+      if(dt) dt.onchange = (e)=>{ draft.date = e.target.value; };
+      const saveBtn = document.getElementById('saveExpense');
+      if(saveBtn){
+        saveBtn.onclick = async ()=>{
+          if(!draft.amount || !draft.category) return;
+          expenses.push({ id: Date.now(), date: draft.date, amount: parseFloat(draft.amount), category: draft.category });
+          await saveExpenses();
+          draft = { amount:'', category:null, date: draft.date };
+          render();
+        };
+      }
+      document.querySelectorAll('[data-del]').forEach(el=>{
+        el.onclick = async ()=>{
+          const id = parseInt(el.dataset.del,10);
+          expenses = expenses.filter(x=>x.id!==id);
+          await saveExpenses();
+          render();
+        };
+      });
+    }
+  }
+
+  function render(){
+    let body = '';
+    let mode = '';
+    if(activeTab==='budget'){
+      if(!settings){ body = renderSetup(false); mode='setup'; }
+      else if(settingsEditing){ body = renderSetup(true); mode='edit'; }
+      else { body = renderBudgetTab(); mode='budget-view'; }
+    } else if(activeTab==='add'){
+      if(!settings){ body = `<div class="screen"><h1 class="page-title">Add an expense</h1><div class="empty-note">Set a budget first on the Budget tab.</div></div>`; }
+      else { body = renderAddTab(); mode='add'; }
+    } else if(activeTab==='report'){
+      body = renderReportTab();
+    } else if(activeTab==='dashboard'){
+      body = renderDashboardTab();
+    }
+
+    app.innerHTML = body + renderTabbar();
+
+    document.querySelectorAll('.tab-btn').forEach(el=>{
+      el.onclick = ()=>{ activeTab = el.dataset.tab; settingsEditing=false; render(); };
+    });
+    bindEvents(mode);
+  }
+
+  (async function init(){
+    await loadAll();
+    render();
+  })();
+})();
+</script>
+</body>
+</html>
